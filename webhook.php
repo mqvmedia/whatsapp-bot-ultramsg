@@ -1,43 +1,49 @@
 <?php
-// Recibir datos del webhook
+// Recibir datos enviados por Whapi
 $data = json_decode(file_get_contents('php://input'), true);
 
-// Verificar si recibimos algo
-if (!empty($data['data']['from']) && !empty($data['data']['body'])) {
-    $telefono = $data['data']['from'];
-    $mensaje_recibido = strtolower(trim($data['data']['body']));
+// Verificar que recibimos un mensaje
+if (!empty($data['messages']) && isset($data['messages'][0]['from']) && isset($data['messages'][0]['text']['body'])) {
+    $telefono = $data['messages'][0]['from']; // Número del cliente
+    $mensaje_recibido = strtolower(trim($data['messages'][0]['text']['body'])); // Mensaje recibido
 
-    // Aquí defines respuestas automáticas
+    // Respuestas automáticas
     $respuesta = '';
 
     if (strpos($mensaje_recibido, 'hola') !== false) {
         $respuesta = "¡Hola! Bienvenido, ¿en qué puedo ayudarte?";
     } else if (strpos($mensaje_recibido, 'precio') !== false) {
-        $respuesta = "Nuestros precios son los siguientes: Producto A \$10, Producto B \$20.";
+        $respuesta = "Nuestros precios son: Producto A \$10, Producto B \$20.";
     } else if (strpos($mensaje_recibido, 'horario') !== false) {
         $respuesta = "Nuestro horario de atención es de lunes a viernes de 9 am a 6 pm.";
     } else {
         $respuesta = "No entendí tu mensaje, ¿podrías reformularlo?";
     }
 
-    // Enviar respuesta usando UltraMsg API
-    $token = "mcf13g9vuljvqn08";
-    $instance_id = "instance116205";
-
-    $url = "https://api.ultramsg.com/{$instance_id}/messages/chat";
+    // Enviar respuesta usando Whapi
+    $token = "n4XmdejEpTbDtNAqY36yCEG3soRNXBMn"; // <-- tu token
+    $url_api = "https://gate.whapi.cloud"; // <-- URL de API base de Whapi
 
     $payload = json_encode([
-        "token" => $token,
         "to" => $telefono,
-        "body" => $respuesta,
-        "priority" => 10
+        "type" => "text",
+        "text" => [
+            "body" => $respuesta
+        ]
     ]);
 
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json']);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $result = curl_exec($ch);
-    curl_close($ch);
+    $curl = curl_init();
+    curl_setopt_array($curl, [
+        CURLOPT_URL => "$url_api/message/text?token=$token",
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CUSTOMREQUEST => "POST",
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => [
+            "Content-Type: application/json"
+        ],
+    ]);
+
+    $response = curl_exec($curl);
+    curl_close($curl);
 }
 ?>
